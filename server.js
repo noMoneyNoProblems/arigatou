@@ -3,7 +3,7 @@ var bodyParser = require("body-parser");
 var mongodb = require("mongodb");
 var ObjectID = mongodb.ObjectID;
 
-var COMICS_COLLECTION = "comics";
+var CONTACTS_COLLECTION = "contacts";
 
 var app = express();
 app.use(bodyParser.json());
@@ -26,5 +26,31 @@ mongodb.MongoClient.connect(process.env.MONGODB_URI, function (err, database) {
   var server = app.listen(process.env.PORT || 8080, function () {
     var port = server.address().port;
     console.log("App now running on port", port);
+  });
+});
+
+app.get("/api/contacts", function(req, res) {
+  db.collection(CONTACTS_COLLECTION).find({}).toArray(function(err, docs) {
+    if (err) {
+      handleError(res, err.message, "Failed to get contacts.");
+    } else {
+      res.status(200).json(docs);
+    }
+  });
+});
+
+app.post("/api/contacts", function(req, res) {
+  var newContact = req.body;
+
+  if (!req.body.name) {
+    handleError(res, "Invalid user input", "Must provide a name.", 400);
+  }
+
+  db.collection(CONTACTS_COLLECTION).insertOne(newContact, function(err, doc) {
+    if (err) {
+      handleError(res, err.message, "Failed to create new contact.");
+    } else {
+      res.status(201).json(doc.ops[0]);
+    }
   });
 });
