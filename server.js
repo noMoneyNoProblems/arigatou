@@ -10,9 +10,23 @@ app.use(bodyParser.json());
 
 // Create a database variable outside of the database connection callback to reuse the connection pool in your app.
 var db;
+var mongoProdUri = process.env.MONGODB_URI;
+var mongoDevUri = 'mongodb://localhost:27017/myproject';
 
-// Connect to the database before starting the application server.
-mongodb.MongoClient.connect(process.env.MONGODB_URI, function (err, database) {
+//Specify default page to load
+// var options = {
+//   index: __dirname + "\\index.html"
+// };
+
+//Serve the react app located in dist
+var distDir = __dirname + "\\dist";
+console.log(distDir);
+app.use(express.static(distDir));
+
+console.log(process.env.MONGODB_URI)
+
+//Connect to the database before starting the application server.
+mongodb.MongoClient.connect(mongoProdUri, function (err, database) {
   if (err) {
     console.log(err);
     process.exit(1);
@@ -29,7 +43,31 @@ mongodb.MongoClient.connect(process.env.MONGODB_URI, function (err, database) {
   });
 });
 
-app.get("/api/contacts", function(req, res) {
+// var server = app.listen(process.env.PORT || 8080, function () {
+//   var port = server.address().port;
+//   console.log("App now running on port", port);
+// });
+
+app.get("/api/test", function(req, res) {
+  console.log("we received a request");
+  res.status(200).json({res: "Yes, we received a request"})
+});
+
+app.get("/api/comicsList", function(req, res) {
+  db.collection(CONTACTS_COLLECTION).find({
+
+  }).toArray(function(err, docs) {
+    if (err) {
+      handleError(res, err.message, "Failed to get contacts.");
+    } else {
+      res.status(200).json(docs);
+    }
+  });
+});
+
+
+
+app.get("/api/latest", function(req, res) {
   db.collection(CONTACTS_COLLECTION).find({}).toArray(function(err, docs) {
     if (err) {
       handleError(res, err.message, "Failed to get contacts.");
@@ -38,6 +76,23 @@ app.get("/api/contacts", function(req, res) {
     }
   });
 });
+
+app.put("/api/contacts", function(req, res) {
+  var updatedContact = req.body;
+
+  if (!req.body._id) {
+    handleError(res, "Invalid user input", "Must provide an id.", 400);
+  }
+
+  db.collection(CONTACTS_COLLECTION).findOneAndUpdate({_id: updatedContact._id}).toArray(function(err, doc) {
+    if (err) {
+      handleError(res, err.message, "Failed to update contacts.");
+    } else {
+      res.status(200).json(doc.op[0]);
+    }
+  });
+});
+
 
 app.post("/api/contacts", function(req, res) {
   var newContact = req.body;
